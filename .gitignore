@@ -1,0 +1,82 @@
+# ==============================================================================
+# FairOps .gitignore
+# ==============================================================================
+
+# ── Secrets & Environment ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+service-account*.json
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+.venv/
+venv/
+env/
+ENV/
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ── Terraform ─────────────────────────────────────────────────────────────────
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+!infra/terraform.tfvars.example
+infra/.terraform.lock.hcl
+infra/crash.log
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.dockerignore
+
+# ── Vertex AI / KFP ──────────────────────────────────────────────────────────
+*.yaml.compiled
+pipeline_output/
+
+# ── dbt ───────────────────────────────────────────────────────────────────────
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# ── Data files (never commit raw data) ───────────────────────────────────────
+*.csv
+*.parquet
+*.pkl
+*.joblib
+data/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,7 @@
+# FairOps — Terraform Variables Example
+# Copy to terraform.tfvars and fill in real values.
+
+project_id                    = "fairops-prod"
+region                        = "us-central1"
+slack_notification_channel_id = ""
+environment                   = "dev"

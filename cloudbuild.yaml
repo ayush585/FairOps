@@ -1,0 +1,133 @@
+steps:
+  # ── Unit Tests ────────────────────────────────────────────────────────────
+  - name: 'python:3.11'
+    id: unit-tests
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install -r sdk/requirements-dev.txt
+        pytest tests/unit/ -v --cov=services --cov=sdk --cov-fail-under=70
+
+  # ── Build Container Images ───────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-gateway
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/gateway:$COMMIT_SHA', 'services/gateway/']
+    waitFor: ['unit-tests']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-auditor
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/auditor:$COMMIT_SHA', 'services/auditor/']
+    waitFor: ['unit-tests']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-explainer
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/explainer:$COMMIT_SHA', 'services/explainer/']
+    waitFor: ['unit-tests']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-notifier
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/notifier:$COMMIT_SHA', 'services/notifier/']
+    waitFor: ['unit-tests']
+
+  # ── Push Images ──────────────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push-gateway
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/gateway:$COMMIT_SHA']
+    waitFor: ['build-gateway']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push-auditor
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/auditor:$COMMIT_SHA']
+    waitFor: ['build-auditor']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push-explainer
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/explainer:$COMMIT_SHA']
+    waitFor: ['build-explainer']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push-notifier
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/fairops/notifier:$COMMIT_SHA']
+    waitFor: ['build-notifier']
+
+  # ── Deploy to Cloud Run ──────────────────────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy-gateway
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - fairops-gateway
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/fairops/gateway:$COMMIT_SHA
+      - --region=us-central1
+      - --service-account=fairops-gateway@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --min-instances=1
+      - --max-instances=100
+      - --memory=2Gi
+    waitFor: ['push-gateway']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy-auditor
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - fairops-auditor
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/fairops/auditor:$COMMIT_SHA
+      - --region=us-central1
+      - --service-account=fairops-auditor@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --min-instances=0
+      - --max-instances=10
+      - --memory=4Gi
+      - --timeout=300
+    waitFor: ['push-auditor']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy-explainer
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - fairops-explainer
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/fairops/explainer:$COMMIT_SHA
+      - --region=us-central1
+      - --service-account=fairops-explainer@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --min-instances=0
+      - --max-instances=5
+      - --memory=4Gi
+      - --timeout=300
+    waitFor: ['push-explainer']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy-notifier
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - fairops-notifier
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/fairops/notifier:$COMMIT_SHA
+      - --region=us-central1
+      - --service-account=fairops-notifier@$PROJECT_ID.iam.gserviceaccount.com
+      - --no-allow-unauthenticated
+      - --min-instances=0
+      - --max-instances=5
+      - --memory=1Gi
+    waitFor: ['push-notifier']
+
+  # ── Compile Vertex AI Pipeline ───────────────────────────────────────────
+  - name: 'python:3.11'
+    id: compile-pipeline
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install kfp==2.6.0 google-cloud-aiplatform==1.43.0
+        python pipelines/compile_pipeline.py
+    waitFor: ['unit-tests']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
