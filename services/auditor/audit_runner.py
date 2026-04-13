@@ -26,6 +26,8 @@ from shared.logging import log_event, log_error
 from shared.errors import InsufficientSampleSizeError, AuditError
 from fairops_sdk.schemas import BiasAuditResult, Severity
 
+from shared.telemetry import emit_bias_metric
+
 from metrics.fairness import compute_all_metrics
 from severity import classify_overall_severity, get_required_action
 from slicing import build_demographic_slices
@@ -143,6 +145,40 @@ def run_audit(
         protected_attributes=protected_attributes,
         demographic_slices=all_slices,
     )
+
+    # ── Sprint 5: Emitting Telemetry to Cloud Monitoring ──
+    top_metric_name = "none"
+    top_metric_value = 0.0
+    threshold_val = 0.0
+    for name, m in all_metrics.items():
+        if m.breached:
+            top_metric_name = name
+            top_metric_value = m.value
+            threshold_val = m.threshold
+            break
+
+    emit_bias_metric(model_id, overall_severity.value, top_metric_name, top_metric_value)
+
+    # ── Sprint 5: Dispatch to Notifier Service ──
+    if overall_severity.value in ["CRITICAL", "HIGH"]:
+        try:
+            import httpx
+            notifier_host = os.environ.get("NOTIFIER_HOST", "http://localhost:8004")
+            with httpx.Client() as client:
+                client.post(
+                    f"{notifier_host}/notify",
+                    json={
+                        "audit_id": audit_result.audit_id,
+                        "model_id": model_id,
+                        "severity": overall_severity.value,
+                        "top_metric_name": top_metric_name,
+                        "top_metric_value": top_metric_value,
+                        "threshold": threshold_val
+                    },
+                    timeout=2.0
+                )
+        except Exception as e:
+            logger.error(f"Failed to trigger /notify on Notifier service: {e}")
 
     log_event(
         logger,
