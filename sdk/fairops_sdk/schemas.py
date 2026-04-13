@@ -5,11 +5,16 @@ ALL services import from here. Never redefine these schemas elsewhere.
 Ref: AGENT.md Section 5.
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, Any
 from datetime import datetime
 from enum import Enum
 from uuid import uuid4
+
+
+# Suppress Pydantic v2 protected namespace warnings for model_* fields.
+# Our schema uses model_id / model_version intentionally.
+_MODEL_CONFIG = ConfigDict(protected_namespaces=())
 
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
@@ -65,6 +70,7 @@ class SessionContext(BaseModel):
 
 
 class PredictionEvent(BaseModel):
+    model_config = _MODEL_CONFIG
     """
     A single prediction event logged by the FairOps SDK.
     This is the fundamental data unit flowing through the entire pipeline.
@@ -114,6 +120,7 @@ class DemographicSlice(BaseModel):
 # ── Bias Audit Schemas ───────────────────────────────────────────────────────
 
 class BiasAuditResult(BaseModel):
+    model_config = _MODEL_CONFIG
     """
     Complete result of a bias audit run.
     Produced by the auditor service after computing all 12 fairness metrics.
@@ -136,6 +143,7 @@ class BiasAuditResult(BaseModel):
 # ── Mitigation Schemas ───────────────────────────────────────────────────────
 
 class MitigationRecord(BaseModel):
+    model_config = _MODEL_CONFIG
     """
     Record of an automated mitigation pipeline execution.
     Written to Cloud Spanner as an immutable audit trail.

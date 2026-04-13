@@ -1,0 +1,10 @@
+# Normalize line endings to LF in the repo; checkout as-is on all OSes
+* text=auto eol=lf
+*.py text eol=lf
+*.tf text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+Dockerfile text eol=lf
