@@ -1,0 +1,1065 @@
+<html lang="en" class="scroll-smooth bg-[#0a0c0f] text-[#f0f0ee] antialiased"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FairOps | GCP-Native ML Bias Monitoring</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    
+    
+    <!-- External Libs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #0a0c0f;
+            --bg-surface: #0f1114;
+            --bg-elevated: #1a1c23;
+            --accent: #f5a623;
+            --text-main: #f0f0ee;
+            --text-muted: #9a9a96;
+            --critical: #ff3b30;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+        }
+
+        h1, h2, h3, h4, h5, h6, .font-serif {
+            font-family: 'DM Serif Display', serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Textures & Effects */
+        .scan-lines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.1));
+            background-size: 100% 4px; /* Using standard css for texture sizing, avoiding px in text */
+            z-index: 0;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .grid-bg::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 3rem 3rem;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(1.5rem); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .reveal {
+            opacity: 0;
+        }
+
+        .reveal.active {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .cursor-blink::after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+            color: var(--accent);
+        }
+
+        /* Table Scroll */
+        .table-container {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+        
+        /* Overriding selection */
+        ::selection {
+            background-color: var(--accent);
+            color: var(--bg-base);
+        }
+    </style>
+</head>
+<body class="relative overflow-x-hidden selection:bg-[#f5a623] selection:text-[#0a0c0f]">
+
+    <!-- TOP NAV -->
+    <nav class="fixed top-0 w-full z-50 backdrop-blur-md bg-[#0a0c0f]/80 border-b border-white/10 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <!-- Logo -->
+            <a href="#" class="flex items-center gap-2 z-50">
+                <span class="font-serif text-2xl tracking-tighter text-white">FairOps</span>
+                <span class="w-1.5 h-1.5 bg-[#f5a623] rounded-full mt-1"></span>
+            </a>
+
+            <!-- Desktop Links -->
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-[#9a9a96]">
+                <a href="#metrics" class="hover:text-white transition-colors">Metrics</a>
+                <a href="#architecture" class="hover:text-white transition-colors">Architecture</a>
+                <a href="#integration" class="hover:text-white transition-colors">Integration</a>
+                <a href="https://github.com/ayush585/FairOps/tree/main/docs" target="_blank" rel="noopener" class="hover:text-white transition-colors">Docs</a>
+                <a href="https://github.com/ayush585/FairOps" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
+            </div>
+
+            <!-- Right Actions -->
+            <div class="hidden md:flex items-center gap-4">
+                <a href="https://pypi.org/project/fairops-sdk/" target="_blank" rel="noopener" class="font-mono text-xs text-[#f5a623] border border-[#f5a623]/50 rounded-[4px] px-3 py-1.5 hover:bg-[#f5a623]/10 transition-colors flex items-center gap-2">
+                    <iconify-icon icon="solar:box-linear" width="16" stroke-width="1.5"></iconify-icon>
+                    PyPI: fairops-sdk
+                </a>
+                <a href="https://github.com/ayush585/FairOps" target="_blank" rel="noopener" class="text-sm font-medium text-[#f5a623] border border-[#f5a623] rounded-none px-4 py-1.5 hover:bg-[#f5a623] hover:text-[#0a0c0f] transition-colors flex items-center gap-1 group">
+                    View on GitHub
+                    <iconify-icon icon="solar:arrow-right-linear" width="16" stroke-width="1.5" class="group-hover:translate-x-0.5 transition-transform"></iconify-icon>
+                </a>
+            </div>
+
+            <!-- Mobile Toggle -->
+            <button id="mobile-menu-btn" class="md:hidden z-50 text-white p-2" aria-label="Toggle menu">
+                <iconify-icon icon="solar:hamburger-menu-linear" width="24" stroke-width="1.5"></iconify-icon>
+            </button>
+        </div>
+
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="fixed inset-0 bg-[#0a0c0f] z-40 hidden flex-col items-center justify-center gap-8 pt-16 border-t border-white/10">
+            <a href="#metrics" class="text-xl font-serif text-[#9a9a96] hover:text-white mobile-link">Metrics</a>
+            <a href="#architecture" class="text-xl font-serif text-[#9a9a96] hover:text-white mobile-link">Architecture</a>
+            <a href="#integration" class="text-xl font-serif text-[#9a9a96] hover:text-white mobile-link">Integration</a>
+            <a href="https://github.com/ayush585/FairOps" target="_blank" rel="noopener" class="text-xl font-serif text-[#9a9a96] hover:text-white mobile-link">GitHub</a>
+            <a href="https://pypi.org/project/fairops-sdk/" target="_blank" rel="noopener" class="font-mono text-sm text-[#f5a623] border border-[#f5a623]/50 rounded-[4px] px-4 py-2 mt-4 mobile-link">PyPI: fairops-sdk</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="relative min-h-[90vh] flex items-center pt-24 pb-16 overflow-hidden bg-[#0a0c0f]">
+        <div class="scan-lines"></div>
+        <div class="grid-bg"></div>
+        
+        <div class="max-w-7xl mx-auto px-6 w-full relative z-10 grid md:grid-cols-12 gap-12 items-center">
+            
+            <!-- Left Col -->
+            <div class="md:col-span-7 flex flex-col gap-6 reveal">
+                <div class="font-mono text-xs md:text-sm text-[#f5a623] tracking-widest uppercase">
+                    [ GOOGLE SOLUTION CHALLENGE 2026 · UNBIASED AI DECISION TRACK ]
+                </div>
+                
+                <h1 class="font-serif text-5xl md:text-6xl lg:text-7xl leading-tight tracking-tight text-white">
+                    Your ML models are <br class="hidden md:block">silently discriminating.
+                </h1>
+                
+                <p class="text-base md:text-lg text-[#9a9a96] max-w-xl leading-relaxed">
+                    FairOps detects bias in production ML systems every 15 minutes, 
+                    explains it in plain English, and automatically mitigates — 
+                    before a compliance officer or a journalist does.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-4">
+                    <button onclick="copyInstallCmd(this)" onauxclick="window.open('https://pypi.org/project/fairops-sdk/', '_blank')" oncontextmenu="window.open('https://pypi.org/project/fairops-sdk/', '_blank'); return false;" class="bg-[#f5a623] text-[#0a0c0f] font-mono text-sm px-6 py-3 rounded-none flex items-center gap-3 hover:bg-[#e09612] transition-colors relative group">
+                        <iconify-icon icon="solar:terminal-linear" width="18" stroke-width="1.5"></iconify-icon>
+                        <span class="cmd-text">pip install fairops-sdk</span>
+                        <div class="absolute inset-0 flex items-center justify-center bg-green-500 text-white font-sans text-sm opacity-0 pointer-events-none transition-opacity duration-200 copy-success">
+                            Copied ✓
+                        </div>
+                    </button>
+                    
+                    <a href="https://github.com/ayush585/FairOps" target="_blank" rel="noopener" class="text-[#f5a623] text-base font-medium flex items-center gap-2 hover:underline underline-offset-4 decoration-[#f5a623]/50 transition-all">
+                        View on GitHub
+                        <iconify-icon icon="solar:arrow-right-linear" width="18" stroke-width="1.5"></iconify-icon>
+                    </a>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-4 mt-8 font-mono text-xs text-[#9a9a96] uppercase tracking-wider">
+                    <span class="flex items-center gap-1.5">
+                        <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623]"></iconify-icon> GCP-Native
+                    </span>
+                    <span class="w-1 h-1 bg-white/20 rounded-full"></span>
+                    <span class="flex items-center gap-1.5">
+                        <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623]"></iconify-icon> 12 Fairness Metrics
+                    </span>
+                    <span class="w-1 h-1 bg-white/20 rounded-full"></span>
+                    <span class="flex items-center gap-1.5">
+                        <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623]"></iconify-icon> EU AI Act Ready
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right Col (Terminal) -->
+            <div class="md:col-span-5 reveal delay-200 relative">
+                <div class="absolute -top-3 -right-3 flex items-center gap-2 bg-[#f5a623]/10 border border-[#f5a623]/30 px-3 py-1 z-20">
+                    <span class="w-2 h-2 rounded-full bg-[#f5a623] animate-pulse"></span>
+                    <span class="font-mono text-xs text-[#f5a623] tracking-widest">LIVE</span>
+                </div>
+                
+                <div class="bg-[#0f1114] border border-white/5 border-l-4 border-l-[#f5a623] p-6 font-mono text-sm md:text-base text-[#f0f0ee] shadow-2xl min-h-[220px] rounded-[4px] relative overflow-hidden flex flex-col justify-start">
+                    <div id="terminal-output" class="whitespace-pre-wrap leading-relaxed"></div>
+                </div>
+            </div>
+            
+        </div>
+    </header>
+
+    <!-- PROBLEM STRIP -->
+    <section class="bg-[#0f1114] border-y border-white/5 py-16 px-6 relative reveal">
+        <div class="max-w-4xl mx-auto text-center flex flex-col items-center gap-10">
+            <h2 class="font-serif text-2xl md:text-4xl leading-snug tracking-tight text-white max-w-[900px]">
+                A model trained on yesterday's data can develop bias tomorrow. 
+                There is no alert when a hiring model starts rejecting candidates 
+                of a specific gender.
+            </h2>
+            
+            <div class="flex flex-wrap justify-center gap-3">
+                <span class="border border-[#f5a623]/30 text-[#f5a623] font-mono text-xs px-4 py-1.5 rounded-[4px] bg-[#f5a623]/5">Hiring</span>
+                <span class="border border-[#f5a623]/30 text-[#f5a623] font-mono text-xs px-4 py-1.5 rounded-[4px] bg-[#f5a623]/5">Credit</span>
+                <span class="border border-[#f5a623]/30 text-[#f5a623] font-mono text-xs px-4 py-1.5 rounded-[4px] bg-[#f5a623]/5">Healthcare</span>
+                <span class="border border-[#f5a623]/30 text-[#f5a623] font-mono text-xs px-4 py-1.5 rounded-[4px] bg-[#f5a623]/5">Criminal Justice</span>
+                <span class="border border-[#f5a623]/30 text-[#f5a623] font-mono text-xs px-4 py-1.5 rounded-[4px] bg-[#f5a623]/5">Content</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="py-24 px-6 bg-[#0a0c0f] relative overflow-hidden">
+        <div class="grid-bg"></div>
+        <div class="max-w-7xl mx-auto relative z-10">
+            <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-20 reveal">From bias to fix in under 4 hours.</h2>
+            
+            <div class="grid md:grid-cols-3 gap-12 md:gap-0 relative">
+                <!-- Step 1 -->
+                <div class="relative md:pr-12 md:border-r border-[#f5a623]/20 reveal">
+                    <div class="absolute -top-12 -left-4 font-serif text-[8rem] leading-none text-[#f5a623]/10 z-0 select-none">01</div>
+                    <div class="relative z-10">
+                        <h3 class="font-mono text-lg text-[#f5a623] mb-4 flex items-center gap-3">
+                            <iconify-icon icon="solar:radar-linear" width="24"></iconify-icon> DETECT
+                        </h3>
+                        <p class="text-[#9a9a96] leading-relaxed text-sm md:text-base">
+                            3 lines of SDK code. Predictions stream to Cloud Pub/Sub → 
+                            Dataflow → BigQuery. 12 fairness metrics computed every 15 minutes 
+                            with 95% bootstrap confidence intervals.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Step 2 -->
+                <div class="relative md:px-12 md:border-r border-[#f5a623]/20 reveal delay-100">
+                    <div class="absolute -top-12 -left-4 md:left-8 font-serif text-[8rem] leading-none text-[#f5a623]/10 z-0 select-none">02</div>
+                    <div class="relative z-10">
+                        <h3 class="font-mono text-lg text-[#f5a623] mb-4 flex items-center gap-3">
+                            <iconify-icon icon="solar:document-text-linear" width="24"></iconify-icon> EXPLAIN
+                        </h3>
+                        <p class="text-[#9a9a96] leading-relaxed text-sm md:text-base">
+                            SHAP TreeExplainer pinpoints which features drive the bias. 
+                            Gemini Pro writes a plain-English audit report for your compliance 
+                            officer — not your data scientist.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Step 3 -->
+                <div class="relative md:pl-12 reveal delay-200">
+                    <div class="absolute -top-12 -left-4 md:left-8 font-serif text-[8rem] leading-none text-[#f5a623]/10 z-0 select-none">03</div>
+                    <div class="relative z-10">
+                        <h3 class="font-mono text-lg text-[#f5a623] mb-4 flex items-center gap-3">
+                            <iconify-icon icon="solar:magic-stick-3-linear" width="24"></iconify-icon> MITIGATE
+                        </h3>
+                        <p class="text-[#9a9a96] leading-relaxed text-sm md:text-base">
+                            A 10-step Vertex AI Pipeline automatically selects the right AIF360 
+                            algorithm, retrains with fairness constraints, validates on live 
+                            traffic, and promotes the debiased model. Under 2% accuracy loss.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- METRICS TABLE -->
+    <section id="metrics" class="py-24 px-6 bg-[#0f1114] border-t border-white/5">
+        <div class="max-w-7xl mx-auto reveal">
+            <div class="mb-12">
+                <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-4">12 Production Fairness Metrics</h2>
+                <p class="text-[#9a9a96] text-base md:text-lg max-w-2xl">
+                    Computed simultaneously on every audit window. All with 
+                    bootstrap CIs and chi-square significance gating.
+                </p>
+            </div>
+            
+            <div class="w-full table-container overflow-x-auto border border-white/10 rounded-[4px]">
+                <table class="w-full text-left min-w-[800px] border-collapse">
+                    <thead>
+                        <tr class="bg-[#1a1c23] border-b border-white/10 font-mono text-xs text-[#9a9a96] uppercase tracking-wider">
+                            <th class="p-4 w-12 font-medium">#</th>
+                            <th class="p-4 font-medium">Metric Name</th>
+                            <th class="p-4 font-medium">Threshold</th>
+                            <th class="p-4 font-medium text-center">Breach</th>
+                            <th class="p-4 font-medium">What It Catches</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-mono text-sm">
+                        <!-- Row 1 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0a0c0f]">
+                            <td class="p-4 text-[#9a9a96]">1</td>
+                            <td class="p-4 text-white">demographic_parity_difference</td>
+                            <td class="p-4 text-[#f5a623]">0.10</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Selection rate gap between groups</td>
+                        </tr>
+                        <!-- Row 2 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0f1114]">
+                            <td class="p-4 text-[#9a9a96]">2</td>
+                            <td class="p-4 text-white">equalized_odds_difference</td>
+                            <td class="p-4 text-[#f5a623]">0.08</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Performance gap at same error rates</td>
+                        </tr>
+                        <!-- Row 3 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0a0c0f]">
+                            <td class="p-4 text-[#9a9a96]">3</td>
+                            <td class="p-4 text-white">equal_opportunity_difference</td>
+                            <td class="p-4 text-[#f5a623]">0.05</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">True positive rate disparity</td>
+                        </tr>
+                        <!-- Row 4 (Highlighted) -->
+                        <tr class="border-b border-white/5 bg-[#f5a623]/5 border-l-2 border-l-[#f5a623] hover:bg-[#f5a623]/10 transition-colors relative">
+                            <td class="p-4 text-[#9a9a96] pl-3">4</td>
+                            <td class="p-4 text-white flex items-center gap-2">
+                                disparate_impact_ratio
+                                <span class="bg-[#f5a623] text-[#0a0c0f] text-[10px] px-1.5 py-0.5 rounded-sm tracking-tight">EEOC</span>
+                            </td>
+                            <td class="p-4 text-[#f5a623]">0.80</td>
+                            <td class="p-4 text-[#f5a623] text-center">&lt;</td>
+                            <td class="p-4 text-white font-sans font-medium">EEOC 4/5ths rule violation</td>
+                        </tr>
+                        <!-- Row 5 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0a0c0f]">
+                            <td class="p-4 text-[#9a9a96]">5</td>
+                            <td class="p-4 text-white">average_odds_difference</td>
+                            <td class="p-4 text-[#f5a623]">0.07</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Combined error rate fairness</td>
+                        </tr>
+                        <!-- Row 6 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0f1114]">
+                            <td class="p-4 text-[#9a9a96]">6</td>
+                            <td class="p-4 text-white">statistical_parity_subgroup_lift</td>
+                            <td class="p-4 text-[#f5a623]">1.25</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Worst-case group advantage</td>
+                        </tr>
+                        <!-- Row 7 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0a0c0f]">
+                            <td class="p-4 text-[#9a9a96]">7</td>
+                            <td class="p-4 text-white">predictive_parity_difference</td>
+                            <td class="p-4 text-[#f5a623]">0.08</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Precision gap across groups</td>
+                        </tr>
+                        <!-- Row 8 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0f1114]">
+                            <td class="p-4 text-[#9a9a96]">8</td>
+                            <td class="p-4 text-white">calibration_gap</td>
+                            <td class="p-4 text-[#f5a623]">0.05</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Score miscalibration by group</td>
+                        </tr>
+                        <!-- Row 9 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0a0c0f]">
+                            <td class="p-4 text-[#9a9a96]">9</td>
+                            <td class="p-4 text-white">individual_fairness_score</td>
+                            <td class="p-4 text-[#f5a623]">0.85</td>
+                            <td class="p-4 text-[#f5a623] text-center">&lt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Similar inputs treated differently</td>
+                        </tr>
+                        <!-- Row 10 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0f1114]">
+                            <td class="p-4 text-[#9a9a96]">10</td>
+                            <td class="p-4 text-white">counterfactual_fairness</td>
+                            <td class="p-4 text-[#f5a623]">0.06</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Causal fairness under intervention</td>
+                        </tr>
+                        <!-- Row 11 -->
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors bg-[#0a0c0f]">
+                            <td class="p-4 text-[#9a9a96]">11</td>
+                            <td class="p-4 text-white">intersectional_bias_score</td>
+                            <td class="p-4 text-[#f5a623]">0.12</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Multi-dimensional discrimination</td>
+                        </tr>
+                        <!-- Row 12 -->
+                        <tr class="hover:bg-white/5 transition-colors bg-[#0f1114]">
+                            <td class="p-4 text-[#9a9a96]">12</td>
+                            <td class="p-4 text-white">temporal_drift_index</td>
+                            <td class="p-4 text-[#f5a623]">5.00</td>
+                            <td class="p-4 text-[#f5a623] text-center">&gt;</td>
+                            <td class="p-4 text-[#9a9a96] font-sans">Bias getting worse over time</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <p class="mt-6 text-sm text-[#7a7a7a]">
+                † If chi-square p &gt; 0.05, severity is overridden to LOW regardless 
+                of metric value. Statistical noise is not bias.
+            </p>
+        </div>
+    </section>
+
+    <!-- SEVERITY SYSTEM -->
+    <section class="py-24 px-6 bg-[#0a0c0f]">
+        <div class="max-w-7xl mx-auto reveal">
+            <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-12">Automated Severity → Automated Action</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Critical -->
+                <div class="bg-[#0f1114] border-l-[3px] border-t border-t-white/5 border-r border-r-white/5 border-b border-b-white/5 border-l-[#ff3b30] p-8 rounded-none">
+                    <h3 class="font-mono text-[#ff3b30] font-medium tracking-wide mb-4">CRITICAL</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Condition</div>
+                            <p class="text-sm font-mono text-white leading-relaxed">
+                                disparate_impact_ratio &lt; 0.65 · OR · any metric &gt; 3× threshold · 
+                                OR · 3+ metrics breached simultaneously
+                            </p>
+                        </div>
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Action</div>
+                            <p class="text-base text-white">Vertex AI Pipeline triggered immediately (synchronous)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- High -->
+                <div class="bg-[#0f1114] border-l-[3px] border-t border-t-white/5 border-r border-r-white/5 border-b border-b-white/5 border-l-[#f5a623] p-8 rounded-none">
+                    <h3 class="font-mono text-[#f5a623] font-medium tracking-wide mb-4">HIGH</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Condition</div>
+                            <p class="text-sm font-mono text-white leading-relaxed">
+                                disparate_impact_ratio ∈ [0.65, 0.80) · OR · 2 metrics breached
+                            </p>
+                        </div>
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Action</div>
+                            <p class="text-base text-white">Cloud Tasks queue, 1-hour delay</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medium -->
+                <div class="bg-[#0f1114] border-l-[3px] border-t border-t-white/5 border-r border-r-white/5 border-b border-b-white/5 border-l-[#7a7a7a] p-8 rounded-none">
+                    <h3 class="font-mono text-[#7a7a7a] font-medium tracking-wide mb-4">MEDIUM</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Condition</div>
+                            <p class="text-sm font-mono text-white leading-relaxed">
+                                1 metric breached, value &lt; 2× threshold, p &lt; 0.05
+                            </p>
+                        </div>
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Action</div>
+                            <p class="text-base text-white">Logged + dashboard highlight + next retrain cycle</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low/Pass -->
+                <div class="bg-[#0f1114] border-l-[3px] border-t border-t-white/5 border-r border-r-white/5 border-b border-b-white/5 border-l-[#3a3a3a] p-8 rounded-none">
+                    <h3 class="font-mono text-[#9a9a96] font-medium tracking-wide mb-4">LOW / PASS</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Condition</div>
+                            <p class="text-sm font-mono text-white leading-relaxed">
+                                p &gt; 0.05 (statistical noise) · OR · no breach
+                            </p>
+                        </div>
+                        <div>
+                            <div class="text-xs font-mono text-[#9a9a96] uppercase mb-1">Action</div>
+                            <p class="text-base text-white">Audit trail only / Clean record</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SDK INTEGRATION -->
+    <section id="integration" class="py-24 px-6 bg-[#0f1114] border-t border-white/5">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center reveal">
+            
+            <!-- Left: Code -->
+            <div>
+                <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-8">3 lines. That's the entire integration.</h2>
+                
+                <div class="mb-4 relative w-max cursor-pointer group" onclick="copyInstallCmd(this)" onauxclick="window.open('https://pypi.org/project/fairops-sdk/', '_blank')" oncontextmenu="window.open('https://pypi.org/project/fairops-sdk/', '_blank'); return false;">
+                    <div class="bg-[#f5a623] text-[#0a0c0f] font-mono text-sm px-4 py-2 rounded-[4px] flex items-center gap-3">
+                        $ pip install fairops-sdk
+                        <iconify-icon icon="solar:copy-linear" width="16" class="opacity-70 group-hover:opacity-100"></iconify-icon>
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center bg-green-500 rounded-[4px] text-white font-sans text-sm opacity-0 pointer-events-none transition-opacity duration-200 copy-success">
+                        Copied ✓
+                    </div>
+                </div>
+
+                <div class="relative rounded-[4px] overflow-hidden border border-white/10 bg-[#0a0c0f]">
+                    <div class="absolute top-0 right-0 p-2">
+                        <button onclick="copyCode(this)" class="text-[#9a9a96] hover:text-white bg-[#1a1c23] border border-white/10 p-1.5 rounded-[4px] transition-colors" aria-label="Copy code">
+                            <iconify-icon icon="solar:copy-linear" width="18"></iconify-icon>
+                        </button>
+                    </div>
+                    <pre><code class="language-python text-sm p-6 block overflow-x-auto">from fairops_sdk import FairOpsClient
+
+client = FairOpsClient(
+    project_id="fairops-prod",
+    model_id="hiring-classifier",
+    model_version="v2.1",
+    use_case="hiring",
+    tenant_id="acme-corp",
+)
+
+# Call after every prediction. That's it.
+client.log_prediction(
+    features={"age": 35, "sex": "Male", "education": "Bachelors"},
+    prediction={"label": "approved", "score": 0.87, "threshold": 0.5},
+)</code></pre>
+                </div>
+                <p class="mt-4 text-sm text-[#9a9a96]">FairOps handles everything else automatically.</p>
+            </div>
+
+            <!-- Right: Features List -->
+            <div class="space-y-4">
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">Streaming to Cloud Pub/Sub</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">Schema validation + PII tokenization (Cloud DLP)</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">Demographic enrichment (BISG + ACS 2022)</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">12-metric audit every 15 minutes</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">Gemini Pro explanation on breach</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">10-step Vertex AI mitigation pipeline</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">Immutable Cloud Spanner audit trail</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <iconify-icon icon="solar:check-circle-linear" class="text-[#f5a623] mt-1 shrink-0" width="20"></iconify-icon>
+                    <span class="text-base md:text-lg text-white">PDF compliance report export (EU AI Act / EEOC)</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- LIVE METRICS COUNTER STRIP -->
+    <section class="w-full bg-[#f5a623]/[0.02] border-y border-[#f5a623]/10 py-16 px-6" id="stats-section">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center reveal">
+            
+            <div class="flex flex-col">
+                <span class="font-serif text-5xl md:text-7xl text-[#f5a623] counter" data-target="12">0</span>
+                <span class="font-sans text-sm md:text-base text-[#9a9a96] mt-2 uppercase tracking-wide">Fairness Metrics</span>
+            </div>
+            
+            <div class="flex flex-col">
+                <span class="font-serif text-5xl md:text-7xl text-[#f5a623] fade-stat opacity-0 transition-opacity duration-1000 delay-300">&lt; 5 min</span>
+                <span class="font-sans text-sm md:text-base text-[#9a9a96] mt-2 uppercase tracking-wide">Bias detection latency</span>
+            </div>
+
+            <div class="flex flex-col">
+                <span class="font-serif text-5xl md:text-7xl text-[#f5a623] fade-stat opacity-0 transition-opacity duration-1000 delay-500">&lt; 2%</span>
+                <span class="font-sans text-sm md:text-base text-[#9a9a96] mt-2 uppercase tracking-wide">Accuracy loss limit</span>
+            </div>
+
+            <div class="flex flex-col">
+                <div class="flex items-baseline justify-center">
+                    <span class="font-serif text-5xl md:text-7xl text-[#f5a623] counter" data-target="100">0</span>
+                    <span class="font-serif text-5xl md:text-7xl text-[#f5a623]">%</span>
+                </div>
+                <span class="font-sans text-sm md:text-base text-[#9a9a96] mt-2 uppercase tracking-wide">EU AI Act coverage</span>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <section id="architecture" class="py-24 px-6 bg-[#0a0c0f]">
+        <div class="max-w-5xl mx-auto reveal">
+            <div class="text-center mb-16">
+                <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-4">GCP-Native. Zero Infrastructure Management.</h2>
+                <p class="text-[#9a9a96] text-base md:text-lg max-w-2xl mx-auto">
+                    Every component is a managed GCP service. 
+                    No Kubernetes. No self-hosted anything.
+                </p>
+            </div>
+
+            <!-- SVG Diagram -->
+            <div class="w-full overflow-x-auto pb-8">
+                <div class="min-w-[800px]">
+                    <svg viewBox="0 0 1000 300" class="w-full h-auto" role="img" aria-label="Architecture diagram showing data flow through GCP services">
+                        <defs>
+                            <style>
+                                .box { fill: #0f1114; stroke: #f5a623; stroke-width: 1; }
+                                .line { fill: none; stroke: #f5a623; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.6; }
+                                .text { fill: #fff; font-family: 'JetBrains Mono', monospace; font-size: 11px; text-anchor: middle; dominant-baseline: middle; }
+                                .dot { fill: #f5a623; }
+                            </style>
+                        </defs>
+
+                        <!-- Paths for animation -->
+                        <path id="path1" d="M 120 150 L 180 150" class="line"></path>
+                        <path id="path2" d="M 280 150 L 340 150" class="line"></path>
+                        <path id="path3" d="M 440 150 L 500 150" class="line"></path>
+                        <path id="path4" d="M 600 150 L 660 150" class="line"></path>
+                        
+                        <!-- Branches -->
+                        <path id="path5a" d="M 760 140 C 780 140, 780 80, 800 80" class="line"></path>
+                        <path id="path5b" d="M 760 160 C 780 160, 780 220, 800 220" class="line"></path>
+                        
+                        <path id="path6a" d="M 900 80 C 920 80, 920 150, 940 150" class="line"></path>
+                        <path id="path6b" d="M 900 220 C 920 220, 920 150, 940 150" class="line"></path>
+
+                        <!-- Boxes (width 100, height 40) -->
+                        <rect x="20" y="130" width="100" height="40" class="box"></rect>
+                        <text x="70" y="150" class="text">Your Model</text>
+
+                        <rect x="180" y="130" width="100" height="40" class="box"></rect>
+                        <text x="230" y="150" class="text">FairOps SDK</text>
+
+                        <rect x="340" y="130" width="100" height="40" class="box"></rect>
+                        <text x="390" y="150" class="text">Cloud Pub/Sub</text>
+
+                        <rect x="500" y="130" width="100" height="40" class="box"></rect>
+                        <text x="550" y="150" class="text">Cloud Dataflow</text>
+
+                        <rect x="660" y="130" width="100" height="40" class="box"></rect>
+                        <text x="710" y="150" class="text">BigQuery/Auditor</text>
+
+                        <!-- Branch A -->
+                        <rect x="800" y="60" width="100" height="40" class="box"></rect>
+                        <text x="850" y="80" class="text">Vertex AI Pipe</text>
+
+                        <!-- Branch B -->
+                        <rect x="800" y="200" width="100" height="40" class="box"></rect>
+                        <text x="850" y="220" class="text">Cloud Run / Gemini</text>
+
+                        <!-- End -->
+                        <rect x="940" y="130" width="40" height="40" class="box"></rect>
+                        <text x="960" y="150" class="text">DB</text>
+
+                        <!-- Animated Dots -->
+                        <circle r="4" class="dot"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#path1"></mpath></animateMotion></circle>
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="0.5s" repeatCount="indefinite"><mpath href="#path2"></mpath></animateMotion></circle>
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="1s" repeatCount="indefinite"><mpath href="#path3"></mpath></animateMotion></circle>
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="1.5s" repeatCount="indefinite"><mpath href="#path4"></mpath></animateMotion></circle>
+                        
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="0s" repeatCount="indefinite"><mpath href="#path5a"></mpath></animateMotion></circle>
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="0.2s" repeatCount="indefinite"><mpath href="#path5b"></mpath></animateMotion></circle>
+                        
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="1s" repeatCount="indefinite"><mpath href="#path6a"></mpath></animateMotion></circle>
+                        <circle r="4" class="dot"><animateMotion dur="2s" begin="1.2s" repeatCount="indefinite"><mpath href="#path6b"></mpath></animateMotion></circle>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- GCP Badges -->
+            <div class="flex flex-wrap justify-center gap-2 mt-8">
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud Pub/Sub</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud Dataflow</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">BigQuery</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Vertex AI Pipelines</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Vertex AI Model Registry</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud Run</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud Spanner</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Gemini Pro</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Looker Studio</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Secret Manager</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud DLP</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud Armor</span>
+                <span class="bg-[#0f1114] border border-white/10 text-[#f5a623] font-mono text-[11px] px-3 py-1 rounded-full">Cloud KMS</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPLIANCE -->
+    <section class="py-24 px-6 bg-[#0f1114] border-t border-white/5">
+        <div class="max-w-7xl mx-auto reveal">
+            <div class="mb-12">
+                <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-4">Built for the regulatory moment.</h2>
+                <p class="text-[#9a9a96] text-base md:text-lg">Not bolted on after the audit letter arrives.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- EU AI Act -->
+                <div class="bg-[#0a0c0f] border-t-2 border-t-[#f5a623] p-6 rounded-none">
+                    <h3 class="font-mono text-[#f5a623] uppercase text-sm mb-3">EU AI Act</h3>
+                    <p class="text-sm text-[#9a9a96] leading-relaxed">
+                        Title III high-risk system requirements. Articles 9, 
+                        12, 13 covered. Audit logs, record-keeping, transparency obligations 
+                        satisfied by default.
+                    </p>
+                </div>
+                <!-- EEOC -->
+                <div class="bg-[#0a0c0f] border-t-2 border-t-[#f5a623] p-6 rounded-none">
+                    <h3 class="font-mono text-[#f5a623] uppercase text-sm mb-3">EEOC 4/5ths Rule</h3>
+                    <p class="text-sm text-[#9a9a96] leading-relaxed">
+                        disparate_impact_ratio directly implements the 
+                        80% rule. Threshold 0.80. Computed on every 15-minute window. 
+                        Breach triggers immediate pipeline.
+                    </p>
+                </div>
+                <!-- GDPR -->
+                <div class="bg-[#0a0c0f] border-t-2 border-t-[#f5a623] p-6 rounded-none">
+                    <h3 class="font-mono text-[#f5a623] uppercase text-sm mb-3">GDPR Art. 22</h3>
+                    <p class="text-sm text-[#9a9a96] leading-relaxed">
+                        Right to explanation for automated decisions. 
+                        DiCE counterfactual examples + Gemini Pro narratives generated 
+                        per individual, on demand.
+                    </p>
+                </div>
+                <!-- India DPDPA -->
+                <div class="bg-[#0a0c0f] border-t-2 border-t-[#f5a623] p-6 rounded-none">
+                    <h3 class="font-mono text-[#f5a623] uppercase text-sm mb-3">India DPDPA</h3>
+                    <p class="text-sm text-[#9a9a96] leading-relaxed">
+                        PII tokenized (not deleted) via Cloud DLP. Purpose 
+                        limitation satisfied. Data stays in your GCP project — never 
+                        leaves your perimeter.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VALIDATION DATASETS -->
+    <section class="py-24 px-6 bg-[#0a0c0f]">
+        <div class="max-w-7xl mx-auto reveal">
+            <div class="mb-12">
+                <h2 class="font-serif text-3xl md:text-5xl tracking-tight text-white mb-4">Tested on documented real-world harm.</h2>
+                <p class="text-[#9a9a96] text-base md:text-lg">Not toy datasets fabricated for benchmarks.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- COMPAS -->
+                <div class="bg-[#0f1114] border-l-[3px] border-[#f5a623] p-8 rounded-[4px]">
+                    <h3 class="font-serif text-2xl text-white mb-2">COMPAS Recidivism</h3>
+                    <div class="font-mono text-xs text-[#f5a623] mb-4">ProPublica</div>
+                    <p class="text-base text-[#9a9a96] leading-relaxed">
+                        Black defendants assigned 2× higher recidivism risk scores. 
+                        FairOps detects this in the first 15-minute audit window.
+                    </p>
+                </div>
+                <!-- HMDA -->
+                <div class="bg-[#0f1114] border-l-[3px] border-[#f5a623] p-8 rounded-[4px]">
+                    <h3 class="font-serif text-2xl text-white mb-2">HMDA Mortgage Data</h3>
+                    <div class="font-mono text-xs text-[#f5a623] mb-4">US CFPB</div>
+                    <p class="text-base text-[#9a9a96] leading-relaxed">
+                        Racial and income-based lending discrimination across ZIP codes. 
+                        Intersectional bias visible across demographic cross-products.
+                    </p>
+                </div>
+                <!-- UCI -->
+                <div class="bg-[#0f1114] border-l-[3px] border-[#f5a623] p-8 rounded-[4px]">
+                    <h3 class="font-serif text-2xl text-white mb-2">UCI Adult Income</h3>
+                    <div class="font-mono text-xs text-[#f5a623] mb-4">UC Irvine ML Repository</div>
+                    <p class="text-base text-[#9a9a96] leading-relaxed">
+                        Gender pay gap proxy in income prediction. A vanilla 
+                        RandomForestClassifier gives disparate_impact_ratio ≈ 0.38 — 
+                        well below the 0.80 EEOC floor.
+                    </p>
+                </div>
+                <!-- ACS -->
+                <div class="bg-[#0f1114] border-l-[3px] border-[#f5a623] p-8 rounded-[4px]">
+                    <h3 class="font-serif text-2xl text-white mb-2">ACS PUMS 2022</h3>
+                    <div class="font-mono text-xs text-[#f5a623] mb-4">US Census Bureau</div>
+                    <p class="text-base text-[#9a9a96] leading-relaxed">
+                        Intersectional race + gender bias in employment decisions. 
+                        Multi-dimensional discrimination detected via metric #11.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- OPEN SOURCE CTA -->
+    <section class="py-32 px-6 bg-[#0a0c0f] border-t border-white/5 relative overflow-hidden text-center">
+        <div class="scan-lines"></div>
+        <div class="max-w-3xl mx-auto relative z-10 reveal">
+            <h2 class="font-serif text-4xl md:text-6xl text-white mb-6 tracking-tight">FairOps is free. Forever.</h2>
+            <p class="text-lg text-[#9a9a96] mb-12 leading-relaxed">
+                MIT licensed. GCP-native. No proprietary runtime. No usage fees. 
+                No vendor lock-in beyond the cloud provider you already use.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="https://github.com/ayush585/FairOps" target="_blank" rel="noopener" class="bg-[#f5a623] text-[#0a0c0f] font-medium px-8 py-3 w-full sm:w-auto rounded-none hover:bg-[#e09612] transition-colors flex items-center justify-center gap-2">
+                    <iconify-icon icon="solar:github-linear" width="20"></iconify-icon>
+                    View on GitHub
+                </a>
+                <a href="https://pypi.org/project/fairops-sdk/" target="_blank" rel="noopener" class="border border-[#f5a623] text-[#f5a623] font-medium px-8 py-3 w-full sm:w-auto rounded-none hover:bg-[#f5a623]/10 transition-colors flex items-center justify-center gap-2">
+                    fairops-sdk on PyPI
+                    <iconify-icon icon="solar:arrow-right-linear" width="18"></iconify-icon>
+                </a>
+            </div>
+
+            <p class="text-xs text-[#9a9a96] font-mono">
+                Built by Toro Bees · Google Solution Challenge 2026 · 
+                Track: Unbiased AI Decision
+            </p>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-[#0f1114] border-t border-[#f5a623] pt-16 pb-8 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-12 md:gap-8 mb-16">
+                <!-- Left -->
+                <div>
+                    <div class="font-serif text-2xl tracking-tighter text-white mb-2">FairOps</div>
+                    <div class="font-mono text-xs text-[#7a7a7a] space-y-1">
+                        <div>MIT License</div>
+                        <div>GCP-Native</div>
+                        <div>Python 3.11</div>
+                    </div>
+                </div>
+                
+                <!-- Center -->
+                <div class="flex flex-wrap gap-x-8 gap-y-4 text-sm text-[#9a9a96]">
+                    <a href="https://github.com/ayush585/FairOps" target="_blank" rel="noopener" class="hover:text-white transition-colors">GitHub</a>
+                    <a href="https://pypi.org/project/fairops-sdk/" target="_blank" rel="noopener" class="hover:text-white transition-colors">PyPI</a>
+                    <a href="#metrics" class="hover:text-white transition-colors">Metrics</a>
+                    <a href="#architecture" class="hover:text-white transition-colors">Architecture</a>
+                    <a href="#integration" class="hover:text-white transition-colors">Integration</a>
+                </div>
+                
+                <!-- Right -->
+                <div class="md:text-right text-sm text-[#7a7a7a] italic">
+                    Built with <span class="not-italic text-red-500">❤️</span> for a fairer future in AI
+                </div>
+            </div>
+            
+            <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[#7a7a7a]">
+                <div>© 2026 Toro Bees. Google Solution Challenge.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script>
+        // Syntax Highlighting
+        hljs.highlightAll();
+
+        // Mobile Menu Toggle
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        const links = document.querySelectorAll('.mobile-link');
+        
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+            document.body.style.overflow = menu.classList.contains('flex') ? 'hidden' : '';
+        });
+
+        links.forEach(link => {
+            link.addEventListener('click', () => {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+                document.body.style.overflow = '';
+            });
+        });
+
+        // Copy to clipboard functions
+        function copyInstallCmd(btn) {
+            navigator.clipboard.writeText('pip install fairops-sdk').then(() => {
+                const msg = btn.querySelector('.copy-success');
+                msg.classList.remove('opacity-0');
+                setTimeout(() => msg.classList.add('opacity-0'), 2000);
+            });
+        }
+
+        function copyCode(btn) {
+            const code = btn.parentElement.nextElementSibling.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const icon = btn.querySelector('iconify-icon');
+                const origIcon = icon.getAttribute('icon');
+                icon.setAttribute('icon', 'solar:check-circle-linear');
+                icon.classList.add('text-[#f5a623]');
+                setTimeout(() => {
+                    icon.setAttribute('icon', origIcon);
+                    icon.classList.remove('text-[#f5a623]');
+                }, 2000);
+            });
+        }
+
+        // Reveal Animations & Counter
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        let countersStarted = false;
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    
+                    // Counter animation logic
+                    if (entry.target.id === 'stats-section' && !countersStarted) {
+                        countersStarted = true;
+                        
+                        // Numbers
+                        document.querySelectorAll('.counter').forEach(counter => {
+                            const target = +counter.getAttribute('data-target');
+                            const duration = 1500;
+                            const increment = target / (duration / 16); // 60fps
+                            let current = 0;
+                            
+                            const updateCounter = () => {
+                                current += increment;
+                                if (current < target) {
+                                    counter.innerText = Math.ceil(current);
+                                    requestAnimationFrame(updateCounter);
+                                } else {
+                                    counter.innerText = target;
+                                }
+                            };
+                            updateCounter();
+                        });
+
+                        // Fades
+                        document.querySelectorAll('.fade-stat').forEach(el => {
+                            el.classList.remove('opacity-0');
+                        });
+                    }
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal, #stats-section').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Terminal Widget Logic
+        const terminalEl = document.getElementById('terminal-output');
+        const states = [
+            [
+                "Auditing: hiring-classifier-v2",
+                "Window: last 1h · 8,412 predictions",
+                "Computing 12 fairness metrics...",
+                "[████████████░░░░] 73%"
+            ],
+            [
+                "<span class='text-[#ff3b30]'>⚠ CRITICAL BIAS DETECTED</span>",
+                "disparate_impact_ratio: 0.38",
+                "Threshold: 0.80 (EEOC 4/5ths)",
+                "Triggering Vertex AI Pipeline..."
+            ],
+            [
+                "<span class='text-green-500'>✓ MITIGATION COMPLETE</span>",
+                "disparate_impact_ratio: 0.38 → 0.83",
+                "Accuracy delta: -0.8% (within gate)",
+                "Model promoted to registry."
+            ]
+        ];
+
+        let currentStateIndex = 0;
+        let currentLineIndex = 0;
+        let currentCharIndex = 0;
+        let isTyping = false;
+
+        function typeChar() {
+            if (currentLineIndex >= states[currentStateIndex].length) {
+                // State finished typing, wait then next state
+                setTimeout(() => {
+                    currentStateIndex = (currentStateIndex + 1) % states.length;
+                    currentLineIndex = 0;
+                    currentCharIndex = 0;
+                    terminalEl.innerHTML = '';
+                    typeChar();
+                }, 2000);
+                return;
+            }
+
+            const currentLineText = states[currentStateIndex][currentLineIndex];
+            
+            // Handle HTML tags directly (don't type character by character for spans)
+            if (currentLineText.startsWith('<') && currentCharIndex === 0) {
+                terminalEl.innerHTML += `<div><span class="text-[#9a9a96] select-none">> </span>${currentLineText}</div>`;
+                currentLineIndex++;
+                setTimeout(typeChar, 400); // pause after line
+                return;
+            }
+
+            if (currentCharIndex === 0) {
+                // Start a new line
+                terminalEl.innerHTML += `<div><span class="text-[#9a9a96] select-none">> </span><span class="typing-line cursor-blink"></span></div>`;
+            }
+
+            const lines = terminalEl.querySelectorAll('.typing-line');
+            const currentLineSpan = lines[lines.length - 1];
+
+            if (currentCharIndex < currentLineText.length) {
+                currentLineSpan.innerHTML = currentLineText.substring(0, currentCharIndex + 1);
+                currentCharIndex++;
+                setTimeout(typeChar, 40);
+            } else {
+                currentLineSpan.classList.remove('cursor-blink');
+                currentLineIndex++;
+                currentCharIndex = 0;
+                setTimeout(typeChar, 400); // pause at end of line
+            }
+        }
+
+        // Start typing effect slightly after load
+        setTimeout(typeChar, 1000);
+
+    </script>
+
+</body></html>
